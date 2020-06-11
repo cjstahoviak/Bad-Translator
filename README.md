@@ -4,9 +4,8 @@ Play 'telephone' with google translate!
 
 ## Dependancies
 
-Make sure pip and python3 are installed.
-Intall additional packages:
-
 ```bash
+sudo apt-get install python3.6 python3-pip
+
 pip3 install googletrans pyspellchecker
 ```
