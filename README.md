@@ -8,5 +8,5 @@ Make sure pip and python3 are installed.
 Intall additional packages:
 
 ```bash
-pip3 install googletrans
+pip3 install googletrans pyspellchecker
 ```
