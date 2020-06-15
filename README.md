@@ -5,7 +5,7 @@ This does nothing more than completely break all grammar and continuity.
 
 Made using python3 and tkinter
 
-![Screenshot](home.jpg)
+![Alt text](home.png)
 
 
 ## Dependancies
