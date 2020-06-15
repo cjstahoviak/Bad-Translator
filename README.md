@@ -1,5 +1,11 @@
 # Bad Translator
-Play 'telephone' with google translate!
+Play 'telephone' with google translate! This program takes a users (english) input,
+translates it through a set number of languages, and lastly translates it to english.
+This does nothing more than completely break all grammar and continuity.
+
+Made using python3 and tkinter
+
+![Alt text](home.png)
 
 
 ## Dependancies
