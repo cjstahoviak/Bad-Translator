@@ -8,3 +8,7 @@ Play 'telephone' with google translate!
 $ sudo apt-get install python3.6 python3-pip python3-tk
 $ pip3 install googletrans pyspellchecker
 ```
+## Running
+```bash
+$ python3 src/badtranslateGUI.py
+```
