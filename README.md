@@ -5,7 +5,7 @@ This does nothing more than completely break all grammar and continuity.
 
 Made using python3 and tkinter
 
-![alt text](https://github.com/cjstahoviak/Bad-Translator/blob/master/home.jpg?raw=true)
+![Screenshot](home.jpg)
 
 
 ## Dependancies
