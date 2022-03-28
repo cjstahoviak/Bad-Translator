@@ -12,7 +12,8 @@ Made using python3 and tkinter
 
 ```bash
 $ sudo apt-get install python3.6 python3-pip python3-tk
-$ pip3 install googletrans pyspellchecker
+$ pip3 install pyspellchecker
+$ pip install googletrans==3.1.0a0
 ```
 ## Running
 ```bash
