@@ -37,8 +37,6 @@ def ruinSentence(string, numRounds):
     return string
 
 
-
-
 s = input("[*] Enter number of languages to parse text through: ")
 
 changeNumLang = False
