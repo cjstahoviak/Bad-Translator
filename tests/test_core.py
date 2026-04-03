@@ -7,6 +7,7 @@ mocked so that the test suite runs offline and deterministically.
 from __future__ import annotations
 
 import pytest
+from spellchecker import SpellChecker
 
 from bad_translator.core import (
     BadTranslator,
@@ -160,36 +161,29 @@ class TestBadTranslatorErrors:
 class TestCorrectSpelling:
     def test_corrects_simple_misspelling(self, mocker):
         """'teh' should be corrected to 'the'."""
-        mocker.patch(
-            "bad_translator.core._spell.split_words",
-            return_value=["teh", "world"],
-        )
-        mocker.patch(
-            "bad_translator.core._spell.correction",
+        mocker.patch.object(SpellChecker, "split_words", return_value=["teh", "world"])
+        mocker.patch.object(
+            SpellChecker,
+            "correction",
             side_effect=lambda w: {"teh": "the", "world": "world"}.get(w),
         )
         assert correct_spelling("teh world") == "the world"
 
     def test_none_correction_falls_back_to_original_word(self, mocker):
         """If SpellChecker.correction() returns None, the original word is kept."""
-        mocker.patch(
-            "bad_translator.core._spell.split_words",
-            return_value=["xyzzy"],
-        )
-        mocker.patch("bad_translator.core._spell.correction", return_value=None)
+        mocker.patch.object(SpellChecker, "split_words", return_value=["xyzzy"])
+        mocker.patch.object(SpellChecker, "correction", return_value=None)
         assert correct_spelling("xyzzy") == "xyzzy"
 
     def test_empty_string_returns_empty(self, mocker):
-        mocker.patch("bad_translator.core._spell.split_words", return_value=[])
+        mocker.patch.object(SpellChecker, "split_words", return_value=[])
         assert correct_spelling("") == ""
 
     def test_multiple_words_joined_with_spaces(self, mocker):
-        mocker.patch(
-            "bad_translator.core._spell.split_words",
-            return_value=["hello", "wrold"],
-        )
-        mocker.patch(
-            "bad_translator.core._spell.correction",
+        mocker.patch.object(SpellChecker, "split_words", return_value=["hello", "wrold"])
+        mocker.patch.object(
+            SpellChecker,
+            "correction",
             side_effect=lambda w: {"hello": "hello", "wrold": "world"}.get(w),
         )
         result = correct_spelling("hello wrold")
