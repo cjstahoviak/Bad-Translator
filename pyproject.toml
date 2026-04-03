@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bad-translator"
+version = "2.0.0"
+description = "Play telephone with Google Translate — intentionally mangled English guaranteed."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "translators>=5.9.0",
+    "pyspellchecker>=0.7.2",
+    "customtkinter>=5.2.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "pytest-mock>=3.14",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+bad-translator-gui = "bad_translator.gui:main"
+bad-translator = "bad_translator.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bad_translator"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=src/bad_translator --cov-report=term-missing --cov-report=xml"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
