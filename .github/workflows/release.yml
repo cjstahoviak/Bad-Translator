@@ -1,0 +1,100 @@
+name: Release
+
+# Triggered when a version tag is pushed, e.g. v2.0.0
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: bad-translator-linux
+            executable: bad-translator-linux
+          - os: windows-latest
+            artifact_name: bad-translator-windows
+            executable: bad-translator-windows.exe
+          - os: macos-latest
+            artifact_name: bad-translator-macos
+            executable: bad-translator-macos
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Linux needs a virtual display to import tkinter during the PyInstaller
+      # analysis phase.
+      - name: Install Xvfb (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y xvfb
+
+      - name: Install dependencies
+        run: pip install pyinstaller -e .
+
+      - name: Build executable (Linux / macOS)
+        if: runner.os != 'Windows'
+        run: |
+          xvfb-run --auto-servernum pyinstaller bad_translator.spec \
+            --distpath dist/ \
+            --name ${{ matrix.executable }}
+
+      - name: Build executable (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pyinstaller bad_translator.spec `
+            --distpath dist/ `
+            --name ${{ matrix.executable }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.executable }}*
+          retention-days: 7
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets/
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Bad Translator ${{ github.ref_name }}"
+          body: |
+            ## Bad Translator ${{ github.ref_name }}
+
+            Download the executable for your platform below — no Python installation required.
+
+            | Platform | File |
+            |----------|------|
+            | Linux    | `bad-translator-linux` |
+            | Windows  | `bad-translator-windows.exe` |
+            | macOS    | `bad-translator-macos` |
+
+            ### Running from source
+            ```bash
+            pip install bad-translator==${{ github.ref_name }}
+            bad-translator-gui
+            ```
+          files: release-assets/**/*
+          draft: false
+          prerelease: false

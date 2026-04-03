@@ -1,111 +1,178 @@
-# Bad Translator - CLAUDE.md
+# Bad Translator — CLAUDE.md
 
 ## Project Overview
 
 Bad Translator is a hobby/entertainment Python application that plays "telephone" with Google Translate. It takes English text, runs it through a configurable number of random intermediate languages, then translates back to English — producing intentionally broken, humorous output.
 
 Two interfaces are provided:
-- **GUI** (`src/badtranslateGUI.py`) — Tkinter desktop app, the primary entry point
-- **CLI** (`src/badtranslate.py`) — Console-based interactive version
+- **GUI** (`src/bad_translator/gui.py`) — CustomTkinter desktop app, launched via `bad-translator-gui`
+- **CLI** (`src/bad_translator/cli.py`) — argparse console interface, launched via `bad-translator`
+
+Both share a common engine in `src/bad_translator/core.py`.
+
+---
 
 ## Repository Structure
 
 ```
 Bad-Translator/
-├── README.md
-├── CLAUDE.md
-├── home.jpg                  # Screenshot used in README
+├── .github/
+│   └── workflows/
+│       ├── ci.yml              # Lint (ruff) + pytest on every push/PR
+│       └── release.yml         # Build PyInstaller executables + GitHub Release on tag push
 ├── src/
-│   ├── badtranslateGUI.py    # Main GUI application (entry point)
-│   ├── badtranslate.py       # CLI version
-│   └── testing.py            # Minimal diagnostic script for googletrans
-└── Examples/
-    ├── Gnome.txt             # Sample text for demo/testing
-    └── test_book.txt         # Simple one-line test text
+│   └── bad_translator/
+│       ├── __init__.py         # Version export (__version__ = "2.0.0")
+│       ├── core.py             # BadTranslator class, TranslationResult, correct_spelling
+│       ├── cli.py              # argparse CLI entry point
+│       └── gui.py              # CustomTkinter GUI entry point
+├── tests/
+│   ├── __init__.py
+│   ├── test_core.py            # Unit tests for core engine (API mocked)
+│   └── test_cli.py             # Unit tests for CLI argument handling
+├── Examples/
+│   ├── Gnome.txt               # Sample text for demo/testing
+│   └── test_book.txt           # Simple one-line test text
+├── .gitignore
+├── pyproject.toml              # Project metadata, dependencies, tool config
+├── bad_translator.spec         # PyInstaller build spec
+├── README.md
+└── CLAUDE.md
 ```
+
+---
 
 ## Tech Stack
 
-- **Language:** Python 3.6+
-- **GUI:** Tkinter (stdlib) with `tkinter.ttk`, `scrolledtext`, `messagebox`, `filedialog`
-- **Translation:** `googletrans==3.1.0a0` (unofficial async Google Translate wrapper)
-- **Spell checking:** `pyspellchecker`
+- **Language:** Python 3.10+
+- **GUI:** `customtkinter>=5.2.2` — modern Tkinter wrapper with dark/light themes
+- **Translation:** `translators>=5.9.0` — free multi-engine wrapper (Google, Bing, etc.), no API key required
+- **Spell checking:** `pyspellchecker>=0.7.2`
+- **Build system:** `hatchling` via `pyproject.toml`
+- **Testing:** `pytest`, `pytest-cov`, `pytest-mock`
+- **Linting:** `ruff`
+- **Distribution:** PyInstaller + GitHub Actions
+
+---
 
 ## Setup
 
 ```bash
-# System dependencies
-sudo apt-get install python3.6 python3-pip python3-tk
-
-# Python dependencies
-pip3 install pyspellchecker
-pip install googletrans==3.1.0a0
+# Clone and install (editable, with dev tools)
+git clone https://github.com/cjstahoviak/Bad-Translator.git
+cd Bad-Translator
+pip install -e ".[dev]"
 ```
 
-> The `googletrans` version is pinned to `3.1.0a0` — other versions break the API.
+---
 
 ## Running
 
 ```bash
-# GUI application (primary)
-python3 src/badtranslateGUI.py
+# GUI (primary)
+bad-translator-gui
+# or
+python -m bad_translator.gui
 
-# CLI application
-python3 src/badtranslate.py
-
-# Diagnostic: verify googletrans is working
-python3 src/testing.py
+# CLI
+bad-translator "Hello, world!"
+bad-translator -n 5 "Hello, world!"
+bad-translator -f Examples/Gnome.txt
+echo "Some text" | bad-translator
+# or
+python -m bad_translator.cli "Hello, world!"
 ```
+
+---
+
+## Testing
+
+```bash
+# Run all tests with coverage
+pytest
+
+# Run linter
+ruff check src/ tests/
+```
+
+Tests mock all external API calls — the suite is fully offline and deterministic.
+
+---
 
 ## Core Logic
 
-Both interfaces share the same translation algorithm:
+### `BadTranslator.translate(text, num_rounds)`
 
-1. Start with English (`en`) input
-2. Loop N times (user-configurable, default 10):
-   - Pick a random language from `googletrans.LANGUAGES`
-   - Translate from the current language to the random one
-3. Translate the final result back to English
-4. Return the mangled output
+1. Start with English (`en`) input.
+2. Loop `num_rounds` times:
+   - Pick a random language from `translators.get_languages("google")` (excluding English).
+   - Translate from the current language to the chosen one via `translators.translate_text()`.
+3. Translate the final result back to English.
+4. Return a `TranslationResult(output, language_chain)`.
 
-Input is spell-corrected via `pyspellchecker` before translation to prevent API errors from typos.
+### `correct_spelling(text)`
 
-**Key functions in `badtranslateGUI.py`:**
-- `ruinSentenceGUI(string, numRounds, parse_title)` — core algorithm for GUI, updates language chain label
-- `ruinSentence(string, numRounds)` — core algorithm for CLI, prints language chain to stdout
-- `correctSpelling(string)` — spell-corrects input using `SpellChecker`
-- `translateCallback(...)` — button click handler; orchestrates spell-check → translate → display
-- `open_file(user_txtbx)` — file browser opening `../Examples` for `.txt` files
-- `mainGUI()` — builds and launches the Tkinter window
+Spell-corrects input using `pyspellchecker`. Guards against `SpellChecker.correction()` returning `None` (a known issue in newer versions) by falling back to the original word.
+
+---
+
+## Key Classes & Functions
+
+| Symbol | File | Description |
+|--------|------|-------------|
+| `BadTranslator` | `core.py` | Main engine class |
+| `TranslationResult` | `core.py` | Dataclass: `output`, `language_chain`, `chain_display` |
+| `BadTranslatorError` | `core.py` | Raised on API failure |
+| `correct_spelling` | `core.py` | Module-level spell correction utility |
+| `App` | `gui.py` | `ctk.CTk` subclass — the main window |
+| `main()` | `gui.py` / `cli.py` | Entry point for each interface |
+
+---
 
 ## GUI Layout
 
-Window is sized to half the screen dimensions and is non-resizable.
+Window is resizable (min 800×550). Uses `grid` geometry manager throughout.
 
-- Top half: large "Bad Translator" title label
-- Middle: language count entry + language chain display label
-- Bottom-left: scrollable input text box
-- Bottom-right: scrollable output text box (read-only after translation)
-- Buttons: TRANSLATE, INSTRUCTIONS, Browse Files
+- Row 0: Title label + theme toggle button (dark/light)
+- Row 1: Side-by-side input (editable) and output (read-only) `CTkTextbox` widgets
+- Row 2: Controls — Rounds entry, Browse Files button, TRANSLATE button
+- Row 3: Language chain label + indeterminate progress bar (shown only during translation)
+
+Translation runs in a `threading.Thread` to keep the UI responsive.
+
+---
 
 ## CLI Usage
 
 ```
--> <text>        Translate text through the configured number of languages
--> -n <number>   Change the number of languages
--> q             Quit
+usage: bad-translator [-h] [-n INT] [-f PATH] [--no-spell] [text ...]
+
+positional arguments:
+  text          Text to translate (omit for stdin)
+
+options:
+  -n, --rounds INT    Number of intermediate language hops (default: 10)
+  -f, --file PATH     Read input from a text file
+  --no-spell          Skip spell correction
 ```
 
-## Known Issues / Gotchas
+---
 
-- **No error handling** around the `googletrans` API calls — if the service is unavailable or rate-limits, the app will crash.
-- `googletrans` is an unofficial library that relies on scraping Google Translate's internal API. It can break without warning if Google changes their endpoints.
-- The file browser's `initialdir` is hardcoded to `"../Examples"` (relative to `src/`), so it only works correctly when launched from the `src/` directory or the project root.
-- `spell.correction(word)` can return `None` in newer versions of `pyspellchecker`, which would cause a crash — no guard exists for this.
-- There are no automated tests; `testing.py` is a one-off diagnostic script, not a test suite.
+## Releases
 
-## Development Notes
+Tag a commit to trigger an automated release:
 
-- No `requirements.txt`, `setup.py`, or virtual environment configuration exists. Dependencies must be installed manually per the README.
-- The project has no linting, formatting, or CI configuration.
-- Both `badtranslateGUI.py` and `badtranslate.py` duplicate the `ruinSentence` logic — they are not shared via a common module.
+```bash
+git tag v2.0.1
+git push origin v2.0.1
+```
+
+The `release.yml` workflow builds standalone executables for Linux, Windows, and macOS using PyInstaller, then creates a GitHub Release with those files attached.
+
+---
+
+## Known Limitations
+
+- `translators` is an unofficial library — it can break if Google changes their internal endpoints, though it is actively maintained and supports fallback engines.
+- No offline/local translation mode; an internet connection is required.
+- GUI tests are not included (CustomTkinter requires a display); core logic and CLI are fully tested.
