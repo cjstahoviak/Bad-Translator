@@ -2,80 +2,22 @@
 
 > Play telephone with Google Translate — intentionally mangled English guaranteed.
 
-[![CI](https://github.com/cjstahoviak/Bad-Translator/actions/workflows/ci.yml/badge.svg)](https://github.com/cjstahoviak/Bad-Translator/actions/workflows/ci.yml)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+Bad Translator takes your English text, runs it through a configurable number of
+random languages via Google Translate, then translates back to English. The
+compounding translation errors produce hilariously broken output — the more hops,
+the worse the result.
 
-Bad Translator takes your English text, runs it through a configurable number of random languages via Google Translate, then translates back to English. The compounding translation errors produce hilariously broken output — the more hops, the worse the result.
-
-![Bad Translator screenshot](home.jpg)
-
----
-
-## Download
-
-Pre-built executables (no Python required) are available on the [**Releases page**](https://github.com/cjstahoviak/Bad-Translator/releases):
-
-| Platform | File |
-|----------|------|
-| Windows  | `Bad-Translator.exe` |
-| macOS    | `Bad-Translator` |
-| Linux    | `Bad-Translator` |
-
----
-
-## Run from Source
-
-### Requirements
-
-- Python 3.10+
-- pip
-
-### Install
-
-```bash
-git clone https://github.com/cjstahoviak/Bad-Translator.git
-cd Bad-Translator
-pip install -e .
-```
-
-### Launch the GUI
-
-```bash
-bad-translator-gui
-```
-
-### Use the CLI
-
-```bash
-# Translate text directly
-bad-translator "To be or not to be, that is the question."
-
-# Specify the number of language hops (default: 10)
-bad-translator -n 5 "Hello, world!"
-
-# Translate a text file
-bad-translator -f Examples/Gnome.txt
-
-# Pipe from stdin
-echo "Something profound" | bad-translator
-
-# Skip spell correction
-bad-translator --no-spell "intentionall typo survives"
-
-# Show help
-bad-translator --help
-```
+**▶ Try it: [calvinstahoviak.com/bad-translator](https://calvinstahoviak.com/bad-translator)**
 
 ---
 
 ## How It Works
 
-1. Input text is spell-corrected to prevent API errors from typos.
-2. The text is translated through **N** randomly selected languages (default: 10).
-3. The result is translated back to English.
+1. The text is translated through **N** randomly selected languages (default: 10).
+2. The result is translated back to English.
 
-Each hop compounds the errors of the last, producing increasingly nonsensical output. The language chain is displayed so you can see the path taken.
+Each hop compounds the errors of the last, producing increasingly nonsensical
+output. The language chain is displayed so you can see the path taken.
 
 **Example:**
 ```
@@ -85,55 +27,54 @@ Input:  "To be or not to be, that is the question."
 Output: "Being or not existing, this is the problem."
 ```
 
+Everything runs in your browser. Translation uses Google's free public translate
+endpoint directly via `fetch` — there is no backend and no API key.
+
 ---
 
-## Development
+## Run Locally
+
+It's a static site — just serve the folder with any web server:
 
 ```bash
-# Install with dev dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Run linter
-ruff check src/ tests/
+git clone https://github.com/cjstahoviak/Bad-Translator.git
+cd Bad-Translator
+python3 -m http.server 8000
+# then open http://localhost:8000/
 ```
 
-### Project Structure
+---
+
+## Project Structure
 
 ```
 Bad-Translator/
 ├── .github/workflows/
-│   ├── ci.yml          # Lint + test on push/PR
-│   └── release.yml     # Build executables + GitHub Release on tag
-├── src/bad_translator/
-│   ├── core.py         # Translation engine (shared by GUI and CLI)
-│   ├── cli.py          # Command-line interface
-│   └── gui.py          # CustomTkinter desktop GUI
-├── tests/
-│   ├── test_core.py    # Unit tests for the engine
-│   └── test_cli.py     # Unit tests for the CLI
-├── Examples/           # Sample text files
-├── pyproject.toml      # Project metadata and dependencies
-└── bad_translator.spec # PyInstaller build spec
+│   └── pages.yml     # Builds & deploys the site to GitHub Pages on push to main
+├── index.html        # The single page
+├── styles.css        # Styling (dark theme)
+├── app.js            # Translation engine + UI logic
+└── Examples/         # Sample text files
 ```
-
-### Cutting a Release
-
-```bash
-git tag v2.0.1
-git push origin v2.0.1
-```
-
-The `release.yml` workflow automatically builds executables for Windows, macOS, and Linux and attaches them to a new GitHub Release.
 
 ---
 
-## Dependencies
+## Deployment
 
-| Package | Purpose |
-|---------|---------|
-| [`translators`](https://pypi.org/project/translators/) | Free multi-engine translation (Google, Bing, DeepL, etc.) |
-| [`pyspellchecker`](https://pypi.org/project/pyspellchecker/) | Spell correction before translation |
-| [`customtkinter`](https://pypi.org/project/customtkinter/) | Modern-looking Tkinter GUI framework |
+The site is served via **GitHub Pages** from this repository. Because the custom
+domain `calvinstahoviak.com` is configured on the `calvinstahoviak.github.io`
+user-site repo, this project page is automatically available at
+`calvinstahoviak.com/bad-translator`.
+
+Pushing to `main` triggers `.github/workflows/pages.yml`, which uploads the repo
+root and deploys it. (One-time setup: in **Settings → Pages**, set the source to
+**GitHub Actions**.)
+
+---
+
+## Notes
+
+- The translation endpoint (`translate.googleapis.com/translate_a/single`) is
+  unofficial — it needs no key and is CORS-friendly, but Google could rate-limit
+  or change it. Fine for a hobby gag; if it ever breaks, the fix would be a small
+  serverless proxy to a translation API.

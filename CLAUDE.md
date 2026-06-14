@@ -2,13 +2,14 @@
 
 ## Project Overview
 
-Bad Translator is a hobby/entertainment Python application that plays "telephone" with Google Translate. It takes English text, runs it through a configurable number of random intermediate languages, then translates back to English — producing intentionally broken, humorous output.
+Bad Translator is a hobby/entertainment web app that plays "telephone" with Google
+Translate. It takes English text, runs it through a configurable number of random
+intermediate languages, then translates back to English — producing intentionally
+broken, humorous output.
 
-Two interfaces are provided:
-- **GUI** (`src/bad_translator/gui.py`) — CustomTkinter desktop app, launched via `bad-translator-gui`
-- **CLI** (`src/bad_translator/cli.py`) — argparse console interface, launched via `bad-translator`
-
-Both share a common engine in `src/bad_translator/core.py`.
+It is a **static, single-page web app** (no backend, no build step). All logic runs
+in the browser. It is deployed via GitHub Pages and served at
+`calvinstahoviak.com/bad-translator`.
 
 ---
 
@@ -18,24 +19,11 @@ Both share a common engine in `src/bad_translator/core.py`.
 Bad-Translator/
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml              # Lint (ruff) + pytest on every push/PR
-│       └── release.yml         # Build PyInstaller executables + GitHub Release on tag push
-├── src/
-│   └── bad_translator/
-│       ├── __init__.py         # Version export (__version__ = "2.0.0")
-│       ├── core.py             # BadTranslator class, TranslationResult, correct_spelling
-│       ├── cli.py              # argparse CLI entry point
-│       └── gui.py              # CustomTkinter GUI entry point
-├── tests/
-│   ├── __init__.py
-│   ├── test_core.py            # Unit tests for core engine (API mocked)
-│   └── test_cli.py             # Unit tests for CLI argument handling
-├── Examples/
-│   ├── Gnome.txt               # Sample text for demo/testing
-│   └── test_book.txt           # Simple one-line test text
-├── .gitignore
-├── pyproject.toml              # Project metadata, dependencies, tool config
-├── bad_translator.spec         # PyInstaller build spec
+│       └── pages.yml       # Deploys the static site to GitHub Pages on push to main
+├── index.html              # The single page (markup + layout)
+├── styles.css              # Styling (dark theme, responsive)
+├── app.js                  # Translation engine + UI wiring
+├── Examples/               # Sample text files (Gnome.txt, test_book.txt)
 ├── README.md
 └── CLAUDE.md
 ```
@@ -44,135 +32,87 @@ Bad-Translator/
 
 ## Tech Stack
 
-- **Language:** Python 3.10+
-- **GUI:** `customtkinter>=5.2.2` — modern Tkinter wrapper with dark/light themes
-- **Translation:** `translators>=5.9.0` — free multi-engine wrapper (Google, Bing, etc.), no API key required
-- **Spell checking:** `pyspellchecker>=0.7.2`
-- **Build system:** `hatchling` via `pyproject.toml`
-- **Testing:** `pytest`, `pytest-cov`, `pytest-mock`
-- **Linting:** `ruff`
-- **Distribution:** PyInstaller + GitHub Actions
-
----
-
-## Setup
-
-```bash
-# Clone and install (editable, with dev tools)
-git clone https://github.com/cjstahoviak/Bad-Translator.git
-cd Bad-Translator
-pip install -e ".[dev]"
-```
+- **HTML / CSS / vanilla JavaScript** — no framework, no bundler, no build step.
+- **Translation:** Google's free public endpoint
+  `https://translate.googleapis.com/translate_a/single` called directly via
+  `fetch` — no API key, CORS-friendly.
+- **Hosting:** GitHub Pages (project page under the account's custom domain).
 
 ---
 
 ## Running
 
 ```bash
-# GUI (primary)
-bad-translator-gui
-# or
-python -m bad_translator.gui
-
-# CLI
-bad-translator "Hello, world!"
-bad-translator -n 5 "Hello, world!"
-bad-translator -f Examples/Gnome.txt
-echo "Some text" | bad-translator
-# or
-python -m bad_translator.cli "Hello, world!"
+# Serve the static files with any local web server, e.g.:
+python3 -m http.server 8000
+# then open http://localhost:8000/
 ```
+
+There are no dependencies to install and nothing to compile.
 
 ---
 
-## Testing
+## Core Logic (`app.js`)
 
-```bash
-# Run all tests with coverage
-pytest
-
-# Run linter
-ruff check src/ tests/
-```
-
-Tests mock all external API calls — the suite is fully offline and deterministic.
-
----
-
-## Core Logic
-
-### `BadTranslator.translate(text, num_rounds)`
+### `badTranslate(text, rounds, onHop)`
 
 1. Start with English (`en`) input.
-2. Loop `num_rounds` times:
-   - Pick a random language from `translators.get_languages("google")` (excluding English).
-   - Translate from the current language to the chosen one via `translators.translate_text()`.
+2. Loop `rounds` times:
+   - Pick a random code from `FOREIGN_CODES` (all of `LANGUAGES` except `en`).
+   - Translate from the current language to the chosen one via `translateOnce`.
+   - Append the language name to the chain and invoke the optional `onHop` callback.
 3. Translate the final result back to English.
-4. Return a `TranslationResult(output, language_chain)`.
+4. Return `{ output, chain }`.
 
-### `correct_spelling(text)`
+### `translateOnce(text, src, dest)`
 
-Spell-corrects input using `pyspellchecker`. Guards against `SpellChecker.correction()` returning `None` (a known issue in newer versions) by falling back to the original word.
+`fetch`es the Google endpoint with `client=gtx&sl=<src>&tl=<dest>&dt=t&q=<text>`,
+parses the nested JSON response (`data[0]` is an array of `[segment, ...]`),
+concatenates the segments, and throws a descriptive `Error` on network/HTTP/parse
+failure or empty result.
 
----
+### `LANGUAGES` / `FOREIGN_CODES`
 
-## Key Classes & Functions
-
-| Symbol | File | Description |
-|--------|------|-------------|
-| `BadTranslator` | `core.py` | Main engine class |
-| `TranslationResult` | `core.py` | Dataclass: `output`, `language_chain`, `chain_display` |
-| `BadTranslatorError` | `core.py` | Raised on API failure |
-| `correct_spelling` | `core.py` | Module-level spell correction utility |
-| `App` | `gui.py` | `ctk.CTk` subclass — the main window |
-| `main()` | `gui.py` / `cli.py` | Entry point for each interface |
+`LANGUAGES` is a hardcoded `code → display name` map of Google-supported languages
+(replaces the old Python `translators.get_languages("google")` call, which has no
+browser equivalent). `FOREIGN_CODES` is its keys minus `en`.
 
 ---
 
-## GUI Layout
+## UI (`index.html` + `app.js`)
 
-Window is resizable (min 800×550). Uses `grid` geometry manager throughout.
+- Header: title + tagline.
+- Two side-by-side textareas: editable **Input (English)** and read-only **Output**.
+- Controls: **Rounds** number input (default 10) + **TRANSLATE** button.
+- Status area: language-chain line, an indeterminate loading bar (shown during
+  translation), and an inline error message.
+- `Ctrl/Cmd+Enter` in the input triggers a translation.
 
-- Row 0: Title label + theme toggle button (dark/light)
-- Row 1: Side-by-side input (editable) and output (read-only) `CTkTextbox` widgets
-- Row 2: Controls — Rounds entry, Browse Files button, TRANSLATE button
-- Row 3: Language chain label + indeterminate progress bar (shown only during translation)
-
-Translation runs in a `threading.Thread` to keep the UI responsive.
-
----
-
-## CLI Usage
-
-```
-usage: bad-translator [-h] [-n INT] [-f PATH] [--no-spell] [text ...]
-
-positional arguments:
-  text          Text to translate (omit for stdin)
-
-options:
-  -n, --rounds INT    Number of intermediate language hops (default: 10)
-  -f, --file PATH     Read input from a text file
-  --no-spell          Skip spell correction
-```
+Translation is async (`await`); the UI disables the button and shows the loader
+while hops are in flight, and the chain updates live via the `onHop` callback.
 
 ---
 
-## Releases
+## Deployment
 
-Tag a commit to trigger an automated release:
+GitHub Pages serves the repo root. Pushing to `main` runs
+`.github/workflows/pages.yml`, which uploads the root and deploys with
+`actions/deploy-pages`. One-time manual setup: **Settings → Pages → Source:
+GitHub Actions**.
 
-```bash
-git tag v2.0.1
-git push origin v2.0.1
-```
-
-The `release.yml` workflow builds standalone executables for Linux, Windows, and macOS using PyInstaller, then creates a GitHub Release with those files attached.
+The custom domain (`calvinstahoviak.com`) lives on the `calvinstahoviak.github.io`
+user-site repo and applies account-wide, so this project page is automatically
+reachable at `calvinstahoviak.com/bad-translator`. Do **not** add a `CNAME` file
+here — it would conflict with the user-site domain config.
 
 ---
 
 ## Known Limitations
 
-- `translators` is an unofficial library — it can break if Google changes their internal endpoints, though it is actively maintained and supports fallback engines.
-- No offline/local translation mode; an internet connection is required.
-- GUI tests are not included (CustomTkinter requires a display); core logic and CLI are fully tested.
+- The `translate_a/single` endpoint is unofficial — it can rate-limit or change if
+  Google alters it. It's the only practical no-backend, no-key option; the fallback
+  would be a small serverless proxy to a translation API.
+- No spell correction (the old Python `pyspellchecker` step was dropped — no clean
+  static-browser equivalent). Could be re-added later with a JS library like
+  `nspell` if desired.
+- No offline mode; an internet connection is required for translation.

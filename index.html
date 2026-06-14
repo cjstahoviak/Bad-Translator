@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bad Translator</title>
+  <meta name="description" content="Play telephone with Google Translate — run English through a chain of random languages and back for gloriously broken results." />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <h1>Bad Translator</h1>
+      <p class="tagline">Plays telephone with Google Translate. Your text takes a tour through random languages and stumbles back into English.</p>
+    </header>
+
+    <section class="panels">
+      <div class="panel">
+        <label class="panel-label" for="input">Input (English)</label>
+        <textarea id="input" class="textbox" placeholder="Type or paste some English text…" spellcheck="true"></textarea>
+      </div>
+      <div class="panel">
+        <label class="panel-label" for="output">Output</label>
+        <textarea id="output" class="textbox" placeholder="The mangled result shows up here…" readonly></textarea>
+      </div>
+    </section>
+
+    <section class="controls">
+      <div class="rounds">
+        <label for="rounds">Rounds</label>
+        <input id="rounds" type="number" min="1" max="50" value="10" />
+      </div>
+      <button id="translate" class="translate-btn" type="button">TRANSLATE</button>
+    </section>
+
+    <section class="status">
+      <p id="chain" class="chain" aria-live="polite"></p>
+      <div id="loader" class="loader" hidden>
+        <div class="bar"></div>
+      </div>
+      <p id="error" class="error" role="alert" hidden></p>
+    </section>
+
+    <footer class="footer">
+      <span>Hobby project · runs entirely in your browser</span>
+      <a href="https://github.com/cjstahoviak/Bad-Translator" rel="noopener">Source on GitHub</a>
+    </footer>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
