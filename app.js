@@ -16,9 +16,9 @@ const LANGUAGES = {
   hr: "Croatian", cs: "Czech", da: "Danish", nl: "Dutch", en: "English",
   eo: "Esperanto", et: "Estonian", tl: "Filipino", fi: "Finnish", fr: "French",
   fy: "Frisian", gl: "Galician", ka: "Georgian", de: "German", el: "Greek",
-  gu: "Gujarati", ht: "Haitian Creole", ha: "Hausa", haw: "Hawaiian", iw: "Hebrew",
+  gu: "Gujarati", ht: "Haitian Creole", ha: "Hausa", haw: "Hawaiian", he: "Hebrew",
   hi: "Hindi", hmn: "Hmong", hu: "Hungarian", is: "Icelandic", ig: "Igbo",
-  id: "Indonesian", ga: "Irish", it: "Italian", ja: "Japanese", jw: "Javanese",
+  id: "Indonesian", ga: "Irish", it: "Italian", ja: "Japanese", jv: "Javanese",
   kn: "Kannada", kk: "Kazakh", km: "Khmer", ko: "Korean", ku: "Kurdish (Kurmanji)",
   ky: "Kyrgyz", lo: "Lao", la: "Latin", lv: "Latvian", lt: "Lithuanian",
   lb: "Luxembourgish", mk: "Macedonian", mg: "Malagasy", ms: "Malay", ml: "Malayalam",
@@ -37,6 +37,14 @@ const LANGUAGES = {
 const FOREIGN_CODES = Object.keys(LANGUAGES).filter((code) => code !== "en");
 
 const ENDPOINT = "https://translate.googleapis.com/translate_a/single";
+
+// Upper bound on rounds (mirrors the `max` on the HTML input). High values fire
+// many sequential requests and invite rate-limiting from the free endpoint.
+const MAX_ROUNDS = 50;
+
+// The free GET endpoint sends the text in the query string, which truncates or
+// rejects long input. Guard against it with a friendly error.
+const MAX_INPUT_CHARS = 1500;
 
 // Translate a single hop. Mirrors BadTranslator._call_api in the Python version.
 async function translateOnce(text, src, dest) {
@@ -73,8 +81,14 @@ async function translateOnce(text, src, dest) {
   return result;
 }
 
-function randomForeignCode() {
-  return FOREIGN_CODES[Math.floor(Math.random() * FOREIGN_CODES.length)];
+// Pick a random foreign code, avoiding `exclude` so consecutive hops never land
+// on the same language (which would be a wasted, no-op round-trip).
+function randomForeignCode(exclude) {
+  let code;
+  do {
+    code = FOREIGN_CODES[Math.floor(Math.random() * FOREIGN_CODES.length)];
+  } while (code === exclude && FOREIGN_CODES.length > 1);
+  return code;
 }
 
 // Run text through `rounds` random languages, then back to English.
@@ -85,7 +99,7 @@ async function badTranslate(text, rounds, onHop) {
   const chain = ["English"];
 
   for (let i = 0; i < rounds; i++) {
-    const target = randomForeignCode();
+    const target = randomForeignCode(currentLang);
     currentText = await translateOnce(currentText, currentLang, target);
     chain.push(LANGUAGES[target]);
     currentLang = target;
@@ -133,8 +147,16 @@ async function onTranslate() {
     showError("Please enter some text to translate.");
     return;
   }
+  if (text.length > MAX_INPUT_CHARS) {
+    showError(`Input is too long (max ${MAX_INPUT_CHARS} characters). Try a shorter passage.`);
+    return;
+  }
   if (!Number.isInteger(rounds) || rounds < 1) {
     showError("Rounds must be a whole number of at least 1.");
+    return;
+  }
+  if (rounds > MAX_ROUNDS) {
+    showError(`Rounds must be ${MAX_ROUNDS} or fewer.`);
     return;
   }
 
