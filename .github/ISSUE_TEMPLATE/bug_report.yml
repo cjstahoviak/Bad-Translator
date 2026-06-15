@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a reproducible bug in Bad Translator
+description: Report a reproducible bug in Lost in Translation
 title: "[Bug] "
 labels: ["bug"]
 body:
@@ -48,7 +48,7 @@ body:
     attributes:
       label: Steps to Reproduce
       placeholder: |
-        1. Run `bad-translator "Hello, world!"`
+        1. Open the app and enter "Hello, world!" in the input
         2. ...
     validations:
       required: true
