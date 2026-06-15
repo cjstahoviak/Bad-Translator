@@ -1,5 +1,5 @@
 name: Feature Request
-description: Suggest an improvement or new feature for Bad Translator
+description: Suggest an improvement or new feature for Lost in Translation
 title: "[Feature] "
 labels: ["enhancement"]
 body:
@@ -9,11 +9,11 @@ body:
       label: Component
       description: Which part of the app would this affect?
       options:
-        - Core Engine (translation logic, spell correction)
-        - GUI (CustomTkinter interface)
-        - CLI (command-line interface)
-        - Dependencies / Build
+        - Translation engine (language hops, results)
+        - UI (page layout, controls, input/output)
+        - Deployment / GitHub Pages
         - Documentation
+        - Other
     validations:
       required: true
 

@@ -1,4 +1,4 @@
-// Bad Translator — browser port of the original Python BadTranslator engine.
+// Lost in Translation — browser port of the original Python BadTranslator engine.
 // Runs entirely client-side: it sends text hop-by-hop through random languages
 // using Google's free, key-less translate endpoint, then back to English.
 

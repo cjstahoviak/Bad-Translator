@@ -1,13 +1,13 @@
-# Bad Translator
+# Lost in Translation
 
 > Play telephone with Google Translate — intentionally mangled English guaranteed.
 
-Bad Translator takes your English text, runs it through a configurable number of
+Lost in Translation takes your English text, runs it through a configurable number of
 random languages via Google Translate, then translates back to English. The
 compounding translation errors produce hilariously broken output — the more hops,
 the worse the result.
 
-**▶ Try it: [calvinstahoviak.com/bad-translator](https://calvinstahoviak.com/bad-translator)**
+**▶ Try it: [calvinstahoviak.com/lost-in-translation](https://calvinstahoviak.com/lost-in-translation)**
 
 ---
 
@@ -37,8 +37,8 @@ endpoint directly via `fetch` — there is no backend and no API key.
 It's a static site — just serve the folder with any web server:
 
 ```bash
-git clone https://github.com/cjstahoviak/Bad-Translator.git
-cd Bad-Translator
+git clone https://github.com/cjstahoviak/lost-in-translation.git
+cd lost-in-translation
 python3 -m http.server 8000
 # then open http://localhost:8000/
 ```
@@ -48,7 +48,7 @@ python3 -m http.server 8000
 ## Project Structure
 
 ```
-Bad-Translator/
+lost-in-translation/
 ├── .github/workflows/
 │   └── pages.yml     # Builds & deploys the site to GitHub Pages on push to main
 ├── index.html        # The single page
@@ -64,7 +64,7 @@ Bad-Translator/
 The site is served via **GitHub Pages** from this repository. Because the custom
 domain `calvinstahoviak.com` is configured on the `calvinstahoviak.github.io`
 user-site repo, this project page is automatically available at
-`calvinstahoviak.com/bad-translator`.
+`calvinstahoviak.com/lost-in-translation`.
 
 Pushing to `main` triggers `.github/workflows/pages.yml`, which uploads the repo
 root and deploys it. (One-time setup: in **Settings → Pages**, set the source to

@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a reproducible bug in Bad Translator
+description: Report a reproducible bug in Lost in Translation
 title: "[Bug] "
 labels: ["bug"]
 body:
@@ -9,18 +9,19 @@ body:
       label: Component
       description: Which part of the app is affected?
       options:
-        - Core Engine (translation logic, spell correction)
-        - GUI (CustomTkinter interface)
-        - CLI (command-line interface)
-        - Dependencies / Build
+        - Translation engine (language hops, results)
+        - UI (page layout, controls, input/output)
+        - Deployment / GitHub Pages
+        - Other
     validations:
       required: true
 
   - type: input
-    id: python_version
+    id: browser
     attributes:
-      label: Python Version
-      placeholder: "e.g. 3.11.4"
+      label: Browser
+      description: Which browser and version are you using?
+      placeholder: "e.g. Chrome 125, Firefox 126, Safari 17"
     validations:
       required: true
 
@@ -32,6 +33,8 @@ body:
         - Windows
         - macOS
         - Linux
+        - iOS
+        - Android
     validations:
       required: true
 
@@ -48,8 +51,10 @@ body:
     attributes:
       label: Steps to Reproduce
       placeholder: |
-        1. Run `bad-translator "Hello, world!"`
-        2. ...
+        1. Open the app
+        2. Enter "Hello, world!" in the input
+        3. Set Rounds to 10 and click TRANSLATE
+        4. ...
     validations:
       required: true
 
@@ -70,8 +75,8 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Relevant Logs or Screenshots
-      description: Paste any error output or attach screenshots. (optional)
+      label: Console Errors or Screenshots
+      description: Paste any errors from the browser console (F12 → Console) or attach screenshots. (optional)
     validations:
       required: false
 

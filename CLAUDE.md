@@ -1,22 +1,22 @@
-# Bad Translator — CLAUDE.md
+# Lost in Translation — CLAUDE.md
 
 ## Project Overview
 
-Bad Translator is a hobby/entertainment web app that plays "telephone" with Google
+Lost in Translation is a hobby/entertainment web app that plays "telephone" with Google
 Translate. It takes English text, runs it through a configurable number of random
 intermediate languages, then translates back to English — producing intentionally
 broken, humorous output.
 
 It is a **static, single-page web app** (no backend, no build step). All logic runs
 in the browser. It is deployed via GitHub Pages and served at
-`calvinstahoviak.com/bad-translator`.
+`calvinstahoviak.com/lost-in-translation`.
 
 ---
 
 ## Repository Structure
 
 ```
-Bad-Translator/
+lost-in-translation/
 ├── .github/
 │   └── workflows/
 │       └── pages.yml       # Deploys the static site to GitHub Pages on push to main
@@ -102,7 +102,7 @@ GitHub Actions**.
 
 The custom domain (`calvinstahoviak.com`) lives on the `calvinstahoviak.github.io`
 user-site repo and applies account-wide, so this project page is automatically
-reachable at `calvinstahoviak.com/bad-translator`. Do **not** add a `CNAME` file
+reachable at `calvinstahoviak.com/lost-in-translation`. Do **not** add a `CNAME` file
 here — it would conflict with the user-site domain config.
 
 ---
