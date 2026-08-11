@@ -167,6 +167,13 @@ user-site repo and applies account-wide, so this project page is automatically
 reachable at `calvinstahoviak.com/lost-in-translation`. Do **not** add a `CNAME` file
 here — it would conflict with the user-site domain config.
 
+### Cache busting
+
+`index.html` loads `styles.css?v=N` and `app.js?v=N`. The filenames never change
+between deploys, so without the query string browsers and the Pages CDN keep
+serving the old copy and a shipped fix appears not to have landed. **Bump `N` in
+both references whenever `styles.css` or `app.js` changes.**
+
 ---
 
 ## Known Limitations
