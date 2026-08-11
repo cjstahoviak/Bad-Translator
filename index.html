@@ -4,25 +4,72 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lost in Translation</title>
-  <meta name="description" content="Play telephone with Google Translate — run English through a chain of random languages and back for gloriously broken results." />
+  <meta name="description" content="Play telephone with randomized languages — run English through a chain of random languages and back for gloriously broken results." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='88'>🗣️</text></svg>" />
+
+  <!-- Stamp the saved theme before first paint so a dark-mode reload never flashes white.
+       No stored choice means light: the default is deliberate, not system-derived. -->
+  <script>
+    try {
+      var saved = localStorage.getItem("lit-theme");
+      if (saved === "dark" || saved === "light") {
+        document.documentElement.dataset.theme = saved;
+      }
+    } catch (err) { /* private mode / storage disabled — fall back to light */ }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <main class="app">
+    <div class="topbar">
+      <button id="theme-toggle" class="btn icon-btn" type="button" aria-pressed="false">
+        <span id="theme-glyph" class="icon-btn-glyph" aria-hidden="true">☾</span>
+        <span class="sr-only">Toggle dark mode</span>
+      </button>
+    </div>
+
     <header class="header">
-      <h1>Lost in Translation</h1>
-      <p class="tagline">Plays telephone with Google Translate. Your text takes a tour through random languages and stumbles back into English.</p>
+      <h1 class="title">Lost in <span class="title-pop">Translation</span></h1>
+      <p class="tagline">play telephone with randomized languages!</p>
     </header>
 
-    <section class="panels">
-      <div class="panel">
-        <label class="panel-label" for="input">Input (English)</label>
-        <textarea id="input" class="textbox" placeholder="Type or paste some English text…" spellcheck="true"></textarea>
+    <section class="panel">
+      <div class="panel-head">
+        <label class="panel-label" for="input">Input <span class="panel-label-sub">(English)</span></label>
+        <button id="shuffle" class="btn chip-btn" type="button">
+          <span aria-hidden="true">🎲</span> random classic
+        </button>
       </div>
-      <div class="panel">
+      <textarea id="input" class="textbox" placeholder="Type or paste some English text…" spellcheck="true"></textarea>
+      <p id="example-credit" class="credit" hidden></p>
+    </section>
+
+    <section class="relay" id="relay">
+      <div class="relay-track">
+        <div class="relay-past" id="relay-past" aria-hidden="true"></div>
+        <div class="relay-arrow" id="relay-arrow" aria-hidden="true">
+          <svg class="arrow-svg" viewBox="0 0 112 44" focusable="false">
+            <line class="arrow-shaft" x1="6" y1="22" x2="72" y2="22" />
+            <path class="arrow-head" d="M68 7 L104 22 L68 37 Z" />
+          </svg>
+        </div>
+        <div class="relay-next" id="relay-next" aria-hidden="true"></div>
+      </div>
+      <p id="chain" class="sr-only" aria-live="polite"></p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
         <label class="panel-label" for="output">Output</label>
-        <textarea id="output" class="textbox" placeholder="The mangled result shows up here…" readonly></textarea>
+        <button id="copy" class="btn chip-btn" type="button" disabled>
+          <span aria-hidden="true">⧉</span> <span id="copy-label">copy</span>
+        </button>
       </div>
+      <textarea id="output" class="textbox textbox-output" placeholder="The mangled result shows up here…" readonly></textarea>
     </section>
 
     <section class="controls">
@@ -30,19 +77,21 @@
         <label for="rounds">Rounds</label>
         <input id="rounds" type="number" min="1" max="50" value="10" />
       </div>
-      <button id="translate" class="translate-btn" type="button">TRANSLATE</button>
+      <button id="translate" class="btn translate-btn" type="button">TRANSLATE</button>
     </section>
 
     <section class="status">
-      <p id="chain" class="chain" aria-live="polite"></p>
-      <div id="loader" class="loader" hidden>
-        <div class="bar"></div>
+      <div id="progress" class="progress" hidden>
+        <div class="progress-rail">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <p id="progress-label" class="progress-label"></p>
       </div>
       <p id="error" class="error" role="alert" hidden></p>
     </section>
 
     <footer class="footer">
-      <span>Hobby project · runs entirely in your browser</span>
+      <span>Calvin Stahoviak</span>
       <a href="https://github.com/cjstahoviak/lost-in-translation" target="_blank" rel="noopener noreferrer">Source on GitHub</a>
     </footer>
   </main>

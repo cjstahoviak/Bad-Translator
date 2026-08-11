@@ -17,7 +17,9 @@ the worse the result.
 2. The result is translated back to English.
 
 Each hop compounds the errors of the last, producing increasingly nonsensical
-output. The language chain is displayed so you can see the path taken.
+output. A relay between the two text boxes shows the journey live: the language
+just left behind slides off to the left, shrinking and fading as it goes, while
+the one being translated into pops in on the right.
 
 **Example:**
 ```
@@ -29,6 +31,15 @@ Output: "Being or not existing, this is the problem."
 
 Everything runs in your browser. Translation uses Google's free public translate
 endpoint directly via `fetch` — there is no backend and no API key.
+
+Also in the box:
+
+- **Light and dark themes** — light by default, with a toggle in the top-right
+  corner that remembers your choice.
+- **🎲 random classic** — loads a short public-domain passage (Frost, Poe,
+  Dickens, Carroll…) so you can start mangling immediately.
+- **Copy** the result in one click, and watch a hop-by-hop progress bar while
+  the chain runs.
 
 ---
 
@@ -52,7 +63,7 @@ lost-in-translation/
 ├── .github/workflows/
 │   └── pages.yml     # Builds & deploys the site to GitHub Pages on push to main
 ├── index.html        # The single page
-├── styles.css        # Styling (dark theme)
+├── styles.css        # Styling (light/dark themes, responsive)
 ├── app.js            # Translation engine + UI logic
 └── Examples/         # Sample text files
 ```
@@ -78,3 +89,6 @@ root and deploys it. (One-time setup: in **Settings → Pages**, set the source 
   unofficial — it needs no key and is CORS-friendly, but Google could rate-limit
   or change it. Fine for a hobby gag; if it ever breaks, the fix would be a small
   serverless proxy to a translation API.
+- Type is Fredoka + Nunito from Google Fonts. It's the only other external
+  request the page makes; if it fails, the page falls back to system fonts and
+  everything still works.
