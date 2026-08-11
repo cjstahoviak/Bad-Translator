@@ -93,26 +93,102 @@ function randomForeignCode(exclude) {
 
 // Run text through `rounds` random languages, then back to English.
 // Mirrors BadTranslator.translate. Returns { output, chain }.
+//
+// `onHop(chain, done, total)` fires after every completed hop — `total` is
+// `rounds + 1` because the trip home to English counts as a hop.
 async function badTranslate(text, rounds, onHop) {
   let currentText = text;
   let currentLang = "en";
   const chain = ["English"];
+  const total = rounds + 1;
 
   for (let i = 0; i < rounds; i++) {
     const target = randomForeignCode(currentLang);
     currentText = await translateOnce(currentText, currentLang, target);
     chain.push(LANGUAGES[target]);
     currentLang = target;
-    if (onHop) onHop(chain);
+    if (onHop) onHop(chain, i + 1, total);
   }
 
   // Final hop back to English.
   currentText = await translateOnce(currentText, currentLang, "en");
   chain.push("English");
-  if (onHop) onHop(chain);
+  if (onHop) onHop(chain, total, total);
 
   return { output: currentText, chain };
 }
+
+// --- Sample text -----------------------------------------------------------
+
+// Short excerpts from works in the public domain, kept well under
+// MAX_INPUT_CHARS so a run stays quick.
+const EXAMPLES = [
+  {
+    title: "The Road Not Taken",
+    author: "Robert Frost",
+    text: "Two roads diverged in a yellow wood,\nAnd sorry I could not travel both\nAnd be one traveler, long I stood\nAnd looked down one as far as I could\nTo where it bent in the undergrowth;",
+  },
+  {
+    title: "Jabberwocky",
+    author: "Lewis Carroll",
+    text: "'Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe;\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.",
+  },
+  {
+    title: "The Raven",
+    author: "Edgar Allan Poe",
+    text: "Once upon a midnight dreary, while I pondered, weak and weary,\nOver many a quaint and curious volume of forgotten lore—",
+  },
+  {
+    title: "Ozymandias",
+    author: "Percy Bysshe Shelley",
+    text: "I met a traveller from an antique land\nWho said: Two vast and trunkless legs of stone\nStand in the desert.",
+  },
+  {
+    title: "A Tale of Two Cities",
+    author: "Charles Dickens",
+    text: "It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness.",
+  },
+  {
+    title: "Moby-Dick",
+    author: "Herman Melville",
+    text: "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, I thought I would sail about a little and see the watery part of the world.",
+  },
+  {
+    title: "Pride and Prejudice",
+    author: "Jane Austen",
+    text: "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
+  },
+  {
+    title: "Fog",
+    author: "Carl Sandburg",
+    text: "The fog comes on little cat feet.\nIt sits looking over harbor and city on silent haunches and then moves on.",
+  },
+  {
+    title: "Hope is the thing with feathers",
+    author: "Emily Dickinson",
+    text: "Hope is the thing with feathers that perches in the soul, and sings the tune without the words, and never stops at all.",
+  },
+  {
+    title: "The Tyger",
+    author: "William Blake",
+    text: "Tyger Tyger, burning bright,\nIn the forests of the night;\nWhat immortal hand or eye\nCould frame thy fearful symmetry?",
+  },
+  {
+    title: "The Tell-Tale Heart",
+    author: "Edgar Allan Poe",
+    text: "True!—nervous—very, very dreadfully nervous I had been and am; but why will you say that I am mad?",
+  },
+  {
+    title: "Alice's Adventures in Wonderland",
+    author: "Lewis Carroll",
+    text: "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do.",
+  },
+  {
+    title: "Sonnet 18",
+    author: "William Shakespeare",
+    text: "Shall I compare thee to a summer's day?\nThou art more lovely and more temperate.",
+  },
+];
 
 // --- UI wiring -------------------------------------------------------------
 
@@ -121,12 +197,175 @@ const outputEl = document.getElementById("output");
 const roundsEl = document.getElementById("rounds");
 const buttonEl = document.getElementById("translate");
 const chainEl = document.getElementById("chain");
-const loaderEl = document.getElementById("loader");
 const errorEl = document.getElementById("error");
+const progressEl = document.getElementById("progress");
+const progressFillEl = document.getElementById("progress-fill");
+const progressLabelEl = document.getElementById("progress-label");
+const relayEl = document.getElementById("relay");
+const pastEl = document.getElementById("relay-past");
+const nextEl = document.getElementById("relay-next");
+const arrowEl = document.getElementById("relay-arrow");
+const themeBtn = document.getElementById("theme-toggle");
+const themeGlyphEl = document.getElementById("theme-glyph");
+const shuffleBtn = document.getElementById("shuffle");
+const creditEl = document.getElementById("example-credit");
+const copyBtn = document.getElementById("copy");
+const copyLabelEl = document.getElementById("copy-label");
+
+// --- Theme -----------------------------------------------------------------
+
+const THEME_KEY = "lit-theme";
+
+function applyTheme(theme) {
+  const dark = theme === "dark";
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  themeBtn.setAttribute("aria-pressed", String(dark));
+  themeGlyphEl.textContent = dark ? "☀" : "☾";
+  try {
+    localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
+  } catch (err) { /* storage disabled — the toggle still works for this visit */ }
+}
+
+themeBtn.addEventListener("click", () => {
+  applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+});
+
+// --- Relay -----------------------------------------------------------------
+
+// Each step further from the arrow shrinks and fades. Length caps how many
+// past languages stay on screen.
+const DEPTH_SCALE = [0.92, 0.75, 0.6, 0.47];
+const DEPTH_OPACITY = [0.85, 0.58, 0.36, 0.2];
+const CHIP_GAP = 12;
+const ARROW_GAP = 10;
+
+const narrowQuery = window.matchMedia("(max-width: 560px)");
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+// Long language names crowd a phone screen, so keep a shorter tail there.
+function maxPast() {
+  return narrowQuery.matches ? 2 : DEPTH_SCALE.length;
+}
+
+function makeChip(name, className) {
+  const chip = document.createElement("span");
+  chip.className = `chip ${className}`;
+  chip.textContent = name;
+  return chip;
+}
+
+// Walk the past chips from the arrow outwards, stacking each one to the left of
+// the previous at its depth's scale. Positions are pure transforms, so nothing
+// reflows and every change animates.
+function layoutPast() {
+  const chips = Array.from(pastEl.children); // oldest → newest
+  let cursor = ARROW_GAP;
+
+  for (let i = chips.length - 1; i >= 0; i--) {
+    const chip = chips[i];
+    const depth = chips.length - 1 - i;
+    const scale = DEPTH_SCALE[depth] ?? 0;
+    chip.style.transform = `translate(${-cursor}px, -50%) scale(${scale})`;
+    chip.style.opacity = String(DEPTH_OPACITY[depth] ?? 0);
+    cursor += chip.offsetWidth * scale + CHIP_GAP;
+  }
+}
+
+// Hand the current language off to the past row without a visual jump: it keeps
+// its on-screen position, then glides (behind the arrow) into its new slot.
+function demoteCurrent(chip) {
+  const before = chip.getBoundingClientRect();
+  chip.classList.remove("chip-current");
+  chip.classList.add("chip-past");
+  chip.style.animation = "none";
+  pastEl.appendChild(chip);
+
+  const anchor = pastEl.getBoundingClientRect();
+  chip.style.transition = "none";
+  chip.style.transform = `translate(${before.right - anchor.right}px, -50%) scale(1)`;
+  chip.style.opacity = "1";
+  return chip;
+}
+
+// The chip has to cross the arrow to reach the past row. Dip it to near-nothing
+// on the way so it reads as passing *through* — hiding it behind the arrow
+// instead would only work for names narrower than the arrow itself.
+function playTransit(chip) {
+  if (reduceMotion.matches || !chip.animate) return;
+  chip.transit = chip.animate(
+    [{ opacity: 1 }, { opacity: 0.05, offset: 0.45 }, { opacity: 1 }],
+    { duration: 450, easing: "ease-in-out" }
+  );
+}
+
+const Relay = {
+  reset() {
+    pastEl.replaceChildren();
+    nextEl.replaceChildren(makeChip("English", "chip-current"));
+  },
+
+  push(name) {
+    // A hop can land before the previous crossing finishes; drop any in-flight
+    // fade so it can't fight the new depth's opacity.
+    for (const chip of pastEl.children) {
+      if (chip.transit) chip.transit.cancel();
+    }
+
+    const demoted = nextEl.firstElementChild
+      ? demoteCurrent(nextEl.firstElementChild)
+      : null;
+
+    // Trimming from the left end never shifts the survivors: the row is
+    // positioned from the arrow outwards.
+    while (pastEl.children.length > maxPast()) {
+      pastEl.firstElementChild.remove();
+    }
+
+    nextEl.replaceChildren(makeChip(name, "chip-current"));
+
+    arrowEl.classList.remove("zap");
+    void arrowEl.offsetWidth; // restart the animation
+    arrowEl.classList.add("zap");
+
+    if (demoted) {
+      void pastEl.offsetWidth; // commit the jump-free start position first
+      demoted.style.transition = "";
+    }
+    layoutPast();
+    if (demoted) playTransit(demoted);
+  },
+};
+
+// Chip size is breakpoint-dependent, so any resize invalidates the measured
+// positions — not just crossing the narrow-screen threshold.
+let relayResize;
+window.addEventListener("resize", () => {
+  clearTimeout(relayResize);
+  relayResize = setTimeout(() => {
+    while (pastEl.children.length > maxPast()) {
+      pastEl.firstElementChild.remove();
+    }
+    layoutPast();
+  }, 120);
+});
+
+// Chip widths depend on Fredoka, so re-measure once it lands.
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(layoutPast);
+}
+
+// --- Status ----------------------------------------------------------------
+
+function setProgress(done, total) {
+  progressFillEl.style.width = `${Math.round((done / total) * 100)}%`;
+  progressLabelEl.textContent = `hop ${done} of ${total}`;
+}
 
 function setLoading(isLoading) {
   buttonEl.disabled = isLoading;
-  loaderEl.hidden = !isLoading;
+  shuffleBtn.disabled = isLoading;
+  progressEl.hidden = !isLoading;
+  relayEl.classList.toggle("is-running", isLoading);
 }
 
 function showError(message) {
@@ -134,9 +373,44 @@ function showError(message) {
   errorEl.hidden = !message;
 }
 
-function renderChain(chain) {
-  chainEl.textContent = chain.join(" → ");
+function setOutput(text) {
+  outputEl.value = text;
+  copyBtn.disabled = !text;
 }
+
+// --- Actions ---------------------------------------------------------------
+
+let lastExample = -1;
+
+shuffleBtn.addEventListener("click", () => {
+  let index = lastExample;
+  while (index === lastExample && EXAMPLES.length > 1) {
+    index = Math.floor(Math.random() * EXAMPLES.length);
+  }
+  lastExample = index;
+
+  const example = EXAMPLES[index];
+  inputEl.value = example.text;
+  creditEl.textContent = `— ${example.title}, ${example.author}`;
+  creditEl.hidden = false;
+  showError("");
+});
+
+inputEl.addEventListener("input", () => {
+  creditEl.hidden = true;
+});
+
+copyBtn.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(outputEl.value);
+    copyLabelEl.textContent = "copied!";
+  } catch (err) {
+    copyLabelEl.textContent = "copy failed";
+  }
+  setTimeout(() => {
+    copyLabelEl.textContent = "copy";
+  }, 1200);
+});
 
 async function onTranslate() {
   const text = inputEl.value.trim();
@@ -160,14 +434,22 @@ async function onTranslate() {
     return;
   }
 
+  // Zero the bar while it's still hidden, so it doesn't rewind from the last run.
+  setProgress(0, rounds + 1);
   setLoading(true);
-  outputEl.value = "";
+  setOutput("");
   chainEl.textContent = "";
+  Relay.reset();
+
+  const onHop = (chain, done, total) => {
+    Relay.push(chain[chain.length - 1]);
+    chainEl.textContent = chain.join(" → ");
+    setProgress(done, total);
+  };
 
   try {
-    const { output, chain } = await badTranslate(text, rounds, renderChain);
-    outputEl.value = output;
-    renderChain(chain);
+    const { output } = await badTranslate(text, rounds, onHop);
+    setOutput(output);
   } catch (err) {
     showError(err.message || "Something went wrong during translation.");
   } finally {
@@ -184,3 +466,8 @@ inputEl.addEventListener("keydown", (event) => {
     onTranslate();
   }
 });
+
+// --- Init ------------------------------------------------------------------
+
+applyTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+Relay.reset();

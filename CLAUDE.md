@@ -36,6 +36,9 @@ lost-in-translation/
 - **Translation:** Google's free public endpoint
   `https://translate.googleapis.com/translate_a/single` called directly via
   `fetch` — no API key, CORS-friendly.
+- **Type:** Fredoka (display/UI) + Nunito (body) from Google Fonts, `display=swap`
+  with a system-font fallback stack. The only external asset besides the
+  translate endpoint.
 - **Hosting:** GitHub Pages (project page under the account's custom domain).
 
 ---
@@ -64,6 +67,10 @@ There are no dependencies to install and nothing to compile.
 3. Translate the final result back to English.
 4. Return `{ output, chain }`.
 
+`onHop(chain, done, total)` fires after every completed hop. `total` is
+`rounds + 1` — the trip home to English counts as a hop — which is what drives
+the determinate progress bar.
+
 ### `translateOnce(text, src, dest)`
 
 `fetch`es the Google endpoint with `client=gtx&sl=<src>&tl=<dest>&dt=t&q=<text>`,
@@ -77,19 +84,74 @@ failure or empty result.
 (replaces the old Python `translators.get_languages("google")` call, which has no
 browser equivalent). `FOREIGN_CODES` is its keys minus `en`.
 
+### `EXAMPLES`
+
+Short excerpts behind the 🎲 button, each `{ text, title, author }`. Everything in
+the list is **strictly US public domain** (pre-1929 publication) — Frost, Poe,
+Dickens, Melville, Austen, Carroll, Blake, Dickinson, Sandburg, Shakespeare. Keep
+it that way when adding entries, and keep them short (~100–300 chars) so a run
+stays quick.
+
 ---
 
 ## UI (`index.html` + `app.js`)
 
-- Header: title + tagline.
-- Two side-by-side textareas: editable **Input (English)** and read-only **Output**.
-- Controls: **Rounds** number input (default 10) + **TRANSLATE** button.
-- Status area: language-chain line, an indeterminate loading bar (shown during
-  translation), and an inline error message.
-- `Ctrl/Cmd+Enter` in the input triggers a translation.
+The page is a vertical pipeline — input on top, the language relay in the middle,
+output below — so the relay animation gets full width to work with:
 
-Translation is async (`await`); the UI disables the button and shows the loader
-while hops are in flight, and the chain updates live via the `onHop` callback.
+1. **Top bar** — theme toggle, pinned right.
+2. **Header** — big centered title, "Translation" in coral; tagline
+   "play telephone with randomized languages!".
+3. **Input panel** — editable textarea + a 🎲 button that loads a public-domain
+   passage and credits it underneath.
+4. **Relay stage** — see below.
+5. **Output panel** — read-only textarea + a copy button.
+6. **Controls** — **Rounds** number input (default 10) + **TRANSLATE** button.
+7. **Status** — determinate progress bar ("hop 4 of 11") + inline error message.
+8. **Footer** — name + source link.
+
+`Ctrl/Cmd+Enter` in the input triggers a translation. Translation is async; the
+UI disables the button and shows the progress bar while hops are in flight.
+
+### Visual system (`styles.css`)
+
+"Chunky sticker": 3px ink outlines (`--bw`), hard offset shadows with no blur
+(`--shadow`), rounded display type, warm cream background with a faint dot grid.
+Buttons physically press down on `:active`. All colors are custom properties
+defined in full on bare `:root` (light); `:root[data-theme="dark"]` redefines
+only the color tokens.
+
+Theme is **light by default** — deliberately, not from `prefers-color-scheme`.
+The choice persists in `localStorage["lit-theme"]` and a small blocking script in
+`<head>` stamps `data-theme` before first paint so a dark reload doesn't flash.
+
+Placeholders are muted + italic with `opacity: 1` (Firefox dims them otherwise);
+the read-only output textarea renders at full-strength `--ink` so real output is
+never mistaken for placeholder text.
+
+### Relay stage
+
+`.relay-track` is a `1fr auto 1fr` grid: the equal side columns pin the arrow to
+dead center no matter how many languages have piled up. Past languages live in
+the right-aligned left column, the current one in the left-aligned right column.
+
+Chips are **absolutely positioned and moved with `transform` only** — layout
+never changes, so `offsetWidth` stays stable and every move animates cleanly.
+`layoutPast()` walks outward from the arrow, stacking each chip at its depth's
+scale (`DEPTH_SCALE` / `DEPTH_OPACITY`, capped at 4 — 2 on narrow screens).
+
+On each hop `Relay.push()`:
+1. `demoteCurrent()` moves the current chip into the past row, re-anchoring it at
+   its existing on-screen position so the handoff has no jump.
+2. Overflow chips are dropped from the left end — harmless, since positions are
+   computed from the arrow outwards.
+3. `playTransit()` dips the crossing chip's opacity to ~0 and back via the Web
+   Animations API. Hiding it behind the arrow instead would only work for names
+   narrower than the arrow, which "Chinese (Simplified)" is not.
+
+Chip widths depend on Fredoka, so `document.fonts.ready` triggers a re-layout.
+The screen-reader chain lives in a visually-hidden `aria-live` element; the relay
+itself is `aria-hidden`.
 
 ---
 
@@ -116,3 +178,6 @@ here — it would conflict with the user-site domain config.
   static-browser equivalent). Could be re-added later with a JS library like
   `nspell` if desired.
 - No offline mode; an internet connection is required for translation.
+- The relay measures chip widths in pixels, so it assumes the fonts have settled.
+  `document.fonts.ready` covers the normal case; a font that loads much later
+  would leave the spacing slightly off until the next hop re-runs `layoutPast()`.
